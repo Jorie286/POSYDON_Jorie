@@ -251,10 +251,10 @@ class Pulsar:
         ## check if pulsar has crossed the death line
         self.alive_state = self.is_alive()
     
-    def RLO_evolve_COMPAS(self, delta_M, delta_Md, Mdot_acc, CE):
+    def RLO_evolve_Chattopadhyay2020(self, delta_M, delta_Md, Mdot_acc, CE):
         '''
         Evolve a pulsar during Roche Lobe overflow (RLO).
-        This uses the prescription for B-field decay applied in COMPAS from Oslowski et al. 2011.
+        This uses the prescription for B-field decay applied in Chattopadhyay et al. 2020 from Oslowski et al. 2011.
         Spin-down is the same for now.
 
         Parameters
@@ -328,7 +328,7 @@ class Pulsar:
             delta_M = np.random.uniform(0.04, 0.1)  
 
         elif CE_acc_prescription in ["MacLeod", "MacLeod_bounded"]:
-            ## use the MacLeod prescription from COMPAS paper, fit to Fig. 4 in Macleod & Ramirez-Ruiz 
+            ## use the MacLeod prescription from Chattopadhyay et al. 2020, fit to Fig. 4 in Macleod & Ramirez-Ruiz 
             a_a = -1.1e-5; a_b = 1.5e-2; b_a = 1.2e-4; b_b = -1.5e-1
 
             a = a_a*M_comp + b_a
@@ -344,7 +344,7 @@ class Pulsar:
         if acc_decay_prescription == "Ye2019":
             self.RLO_evolve_Ye2019(delta_t, tau_d, delta_M, delta_Md)
         elif acc_decay_prescription == "COMPAS":
-            self.RLO_evolve_COMPAS(delta_M, delta_Md, self.Mdot_edd, True)
+            self.RLO_evolve_Chattopadhyay2020(delta_M, delta_Md, self.Mdot_edd, True)
 
     def is_alive(self):
         '''
@@ -362,4 +362,4 @@ class Pulsar:
         if ((L/Edot) < E_max): return True
         #elif (self.Bfield < death_line): return False
         else: return False
-       
+        
