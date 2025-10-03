@@ -135,7 +135,7 @@ class Pulsar:
         P_dot =  9.87e-48*const.secyer * self.Bfield**2/P    ## NS spindown rate
 
         power = 4*np.pi**2 * self.moment_inertia * P_dot / P**3
-        return power  
+        return power, P_dot  
 
     def calc_magnetosphere_radius(self, Mdot_acc):
         '''
@@ -343,7 +343,7 @@ class Pulsar:
 
         if acc_decay_prescription == "Ye2019":
             self.RLO_evolve_Ye2019(delta_t, tau_d, delta_M, delta_Md)
-        elif acc_decay_prescription == "COMPAS":
+        elif acc_decay_prescription == "Chattopadhyay2020":
             self.RLO_evolve_Chattopadhyay2020(delta_M, delta_Md, self.Mdot_edd, True)
 
     def is_alive(self):
@@ -357,7 +357,7 @@ class Pulsar:
 
         E_max = 0.01   ## threshold radio efficiency
         L = self.luminosity
-        Edot = self.calc_NS_spindown_power()
+        Edot, P_dot = self.calc_NS_spindown_power()
   
         if ((L/Edot) < E_max): return True
         #elif (self.Bfield < death_line): return False
