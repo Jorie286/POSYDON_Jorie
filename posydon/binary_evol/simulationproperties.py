@@ -373,6 +373,7 @@ class PulsarHooks(EvolveHooks):
         pulsar_spin = []
         pulsar_Bfield = []
         pulsar_alive = []
+        pulsar_pdot
 
         ## if sampling is turned-on, keep input values for decay paremeters
         delta_Md = self.delta_Md
@@ -389,6 +390,7 @@ class PulsarHooks(EvolveHooks):
             pulsar_spin.extend(np.full(len(state_history[:NS_start]), np.nan))
             pulsar_Bfield.extend(np.full(len(state_history[:NS_start]), np.nan))
             pulsar_alive.extend(np.full(len(state_history[:NS_start]), False))
+            pulsar_pdot.extend(np.full(len(state_history[:NS_start]), np.nan))
 
             donor_surface_h1 = np.array(star_companion.surface_h1_history, dtype=float)
 
@@ -407,6 +409,7 @@ class PulsarHooks(EvolveHooks):
             pulsar_spin.append(pulsar.spin)
             pulsar_Bfield.append(pulsar.Bfield)
             pulsar_alive.append(pulsar.is_alive())
+            pulsar_pdot.append(pulsar.calc_NS_spindown_power()[1])
 
             ## loop through states where star is a NS
             for i in NS_indices[1:]:
@@ -427,7 +430,7 @@ class PulsarHooks(EvolveHooks):
                         if self.acc_decay_prescription == "Ye2019" :
                             pulsar.RLO_evolve_Ye2019(delta_t, self.tau_d, delta_M, self.delta_Md)  
 
-                        elif self.acc_decay_prescription == "COMPAS":
+                        elif self.acc_decay_prescription == "Chattopadhyay2020":
 
                             ## get Eddington-limited accretion rate onto NS at this timestep
                             ## improvement: get the delta_M from the MESA steps directly, it will 
@@ -436,7 +439,7 @@ class PulsarHooks(EvolveHooks):
                             Mdot_acc = delta_M/delta_t
                             if Mdot_acc > pulsar.Mdot_edd: Mdot_acc = pulsar.Mdot_edd
 
-                            pulsar.RLO_evolve_COMPAS(delta_M, self.delta_Md, Mdot_acc, False)
+                            pulsar.RLO_evolve_Chattopadhyay2020(delta_M, self.delta_Md, Mdot_acc, False)
                     else:
                         pulsar.detached_evolve(delta_t, self.tau_d) 
               
@@ -453,24 +456,27 @@ class PulsarHooks(EvolveHooks):
                 pulsar_spin.append(pulsar.spin)
                 pulsar_Bfield.append(pulsar.Bfield)
                 pulsar_alive.append(pulsar.is_alive())
+                pulsar_pdot.append(pulsar.calc_NS_spindown_power()[1]) # get only the value of P_dot from the calc_NS_spindown_power function
             
             ## fill remaining state history if NS becomes a different object after pulsar evolution
             if (NS_end+1) < len(state_history):
                 pulsar_spin.extend(np.full(len(state_history[NS_end+1:]), np.nan))
                 pulsar_Bfield.extend(np.full(len(state_history[NS_end+1:]), np.nan))
                 pulsar_alive.extend(np.full(len(state_history[NS_end+1:]), False))
+                pulsar_pdot.extend(np.full(len(state_history[NS_end+1:]), np.nan))
 
         ## if star is never a NS, fill history arrays with NaN/False               
         else:     
             pulsar_spin.extend(np.full(len(state_history), np.nan))
             pulsar_Bfield.extend(np.full(len(state_history), np.nan))
             pulsar_alive.extend(np.full(len(state_history), False))
+            pulsar_pdot.extend(np.full(len(state_history), np.nan))
 
         ## raise an error if history length mismatch
-        if ((len(pulsar_spin) != len(state_history)) | len(pulsar_Bfield) != len(state_history) | len(pulsar_alive) != len(state_history)):
+        if ((len(pulsar_spin) != len(state_history)) | len(pulsar_Bfield) != len(state_history) | len(pulsar_alive) != len(state_history) | len(pulsar_pdot) != len(state_history)):
             raise ValueError("length of pulsar history does not match length of binary history")
 
-        return np.array(pulsar_spin, dtype=float), np.array(pulsar_Bfield, dtype=float), np.array(pulsar_alive, dtype=bool)
+        return np.array(pulsar_spin, dtype=float), np.array(pulsar_Bfield, dtype=float), np.array(pulsar_alive, dtype=bool), np.array(pulsar_pdot, dtype=float)
     
     def pre_evolve(self, binary):
         """Initialize the step name to match history."""
@@ -489,16 +495,18 @@ class PulsarHooks(EvolveHooks):
         MUST be used with the step_names hook!
         extra_columns=['pulsar_spin', 'pulsar_Bfield', 'pulsar_alive'] for S1, S2 kwargs 
         """   
-        star_1_pulsar_spin, star_1_pulsar_Bfield, star_1_pulsar_alive = self.get_pulsar_history(binary, binary.star_1,  binary.star_2)
-        star_2_pulsar_spin, star_2_pulsar_Bfield, star_2_pulsar_alive = self.get_pulsar_history(binary, binary.star_2,  binary.star_1)
+        star_1_pulsar_spin, star_1_pulsar_Bfield, star_1_pulsar_alive, star_1_pulsar_pdot = self.get_pulsar_history(binary, binary.star_1,  binary.star_2)
+        star_2_pulsar_spin, star_2_pulsar_Bfield, star_2_pulsar_alive, star_2_pulsar_pdot = self.get_pulsar_history(binary, binary.star_2,  binary.star_1)
 
         setattr(binary.star_1, "pulsar_spin", star_1_pulsar_spin)
         setattr(binary.star_1, "pulsar_Bfield", star_1_pulsar_Bfield)
         setattr(binary.star_1, "pulsar_alive", star_1_pulsar_alive)
+        setattr(binary.star_1, "pulsar_pdot", star_1_pulsar_pdot)
 
         setattr(binary.star_2, "pulsar_spin", star_2_pulsar_spin)
         setattr(binary.star_2, "pulsar_Bfield", star_2_pulsar_Bfield)
         setattr(binary.star_2, "pulsar_alive", star_2_pulsar_alive)
+        setattr(binary.star_2, "pulsar_alive", star_2_pulsar_pdot)
 
         return binary
 
